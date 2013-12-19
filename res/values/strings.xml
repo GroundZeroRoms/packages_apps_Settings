@@ -4902,4 +4902,8 @@
 
     <!-- Text to display in regulatory info screen (from device overlay). -->
     <string name="regulatory_info_text"></string>
+
+    <!-- Validus Stats -->
+    <string name="du_stats">Validus13 Stats</string>
+    <string name="du_stats_summary">Help make Validus better by opting into anonymous statistics reporting</string>
 </resources>

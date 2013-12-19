@@ -145,4 +145,13 @@
                 android:title="@string/selinux_status"
                 android:summary="@string/selinux_status_enforcing"/>
 
+        <!-- Validus Stats -->
+        <PreferenceScreen
+            android:key="dustats"
+            android:title="@string/du_stats"
+            android:summary="@string/du_stats_summary" >
+            <intent android:action="android.intent.action.MAIN"
+                android:targetPackage="android.romstats"
+                android:targetClass="android.romstats.AnonymousStats" />
+        </PreferenceScreen>				
 </PreferenceScreen>
