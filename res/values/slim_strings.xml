@@ -900,4 +900,9 @@ two in order to insert additional control points. \'Remove\' deletes the selecte
     <string name="dpi">DPI</string>
     <string name="current_lcd_density">"Current LCD Density: "</string>
 
+    <!-- Chamber of Secrets -->
+    <string name="chamber_title">Psycho Circus</string>
+    <string name="chamber_toast">The Circus has opened</string>
+
+
 </resources>
