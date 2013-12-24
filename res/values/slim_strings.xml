@@ -906,4 +906,8 @@ two in order to insert additional control points. \'Remove\' deletes the selecte
     <string name="chamber_title">Psycho Circus</string>
     <string name="chamber_toast">The Circus has opened</string>
 
+    <!-- Volume Keys Media Control -->
+    <string name="volume_keys_control_media_stream">Media control</string>
+    <string name="volume_keys_control_media_stream_summary">Volume keys control media volume rather than notifications</string>
+
 </resources>
