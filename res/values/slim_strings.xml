@@ -44,8 +44,8 @@
     <string name="set">Set</string>
 
     <!-- About phone screen, Validus version -->
-    <string name="slim_version_title">Validus13 Version</string>
-    <string name="slim_version_default">Unknown</string>
+    <string name="gzr_version_title">Validus13 Version</string>
+    <string name="gzr_version_default">Unknown</string>
 
     <!-- Display settings screen, notification light settings -->
     <string name="display_category_light_options_title">Light options</string>
