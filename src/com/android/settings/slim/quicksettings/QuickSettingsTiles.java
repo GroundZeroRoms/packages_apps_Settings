@@ -16,8 +16,6 @@
 
 package com.android.settings.slim.quicksettings;
 
-import static com.android.internal.util.slim.QSConstants.TILE_CUSTOM;
-import static com.android.internal.util.slim.QSConstants.TILE_CUSTOM_KEY;
 import static com.android.internal.util.slim.QSConstants.TILE_DELIMITER;
 
 import android.app.Activity;
@@ -26,16 +24,13 @@ import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.Fragment;
 import android.content.Context;
-import android.content.Intent;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.content.res.Resources.NotFoundException;
 import android.content.SharedPreferences;
-import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.UserHandle;
 import android.provider.Settings;
@@ -52,36 +47,22 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
-import android.widget.Button;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.android.internal.util.slim.AppHelper;
 import com.android.internal.util.slim.DeviceUtils;
-import com.android.internal.util.slim.LockscreenTargetUtils;
 import com.android.internal.util.slim.QSConstants;
 import com.android.settings.R;
 import com.android.settings.slim.quicksettings.QuickSettingsUtil.TileInfo;
-import com.android.settings.slim.util.IconPicker;
-import com.android.settings.slim.util.IconPicker.OnIconPickListener;
-import com.android.settings.slim.util.ShortcutPickerHelper;
 
 import android.util.Log;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 
-public class QuickSettingsTiles extends Fragment implements View.OnClickListener,
-        View.OnLongClickListener, ShortcutPickerHelper.OnPickListener, OnIconPickListener {
-
-    private static final String TAG = "QuickSettingsTiles";
+public class QuickSettingsTiles extends Fragment {
 
     private static final int MENU_RESET         = Menu.FIRST;
     private static final int MENU_DYNAMICTILES  = MENU_RESET + 1;
@@ -98,36 +79,12 @@ public class QuickSettingsTiles extends Fragment implements View.OnClickListener
     private static final int DLG_HELP          = 6;
     private static final int DLG_DISABLED      = 7;
     private static final int DLG_DYNAMICTILES  = 8;
-    private static final int DLG_CUSTOM_TILE = 9;
 
     private DraggableGridView mDragView;
     private ViewGroup mContainer;
     private LayoutInflater mInflater;
     private Resources mSystemUiResources;
     private TileAdapter mTileAdapter;
-    private ShortcutPickerHelper mPicker;
-    private IconPicker mIconPicker;
-    private File mTemporaryImage;
-
-    private ImageButton mDialogIconOne;
-    private ImageButton mDialogIconTwo;
-    private ImageButton mDialogIconThree;
-    private ImageButton mDialogIconFour;
-    private ImageButton mDialogIconFive;
-    private Button mDialogLabelOne;
-    private Button mDialogLabelTwo;
-    private Button mDialogLabelThree;
-    private Button mDialogLabelFour;
-    private Button mDialogLabelFive;
-
-    private Drawable mEmptyIcon;
-    private String mEmptyLabel;
-
-    private String mCurrentCustomTile = null;
-
-    private boolean mShortPress = true;
-
-    private int mCurrentAction = 0;
 
     private int mTileTextSize;
     private int mTileTextPadding;
@@ -140,12 +97,6 @@ public class QuickSettingsTiles extends Fragment implements View.OnClickListener
         mContainer.setClipChildren(false);
         mContainer.setClipToPadding(false);
         mInflater = inflater;
-
-        mIconPicker = new IconPicker(getActivity(), this);
-        mPicker = new ShortcutPickerHelper(getActivity(), this);
-        mEmptyLabel = getResources().getString(R.string.lockscreen_target_empty);
-        mEmptyIcon = getResources().getDrawable(R.drawable.ic_empty);
-        mTemporaryImage = new File(getActivity().getCacheDir() + "/custom_tile.tmp");
 
         PackageManager pm = getActivity().getPackageManager();
         if (pm != null) {
@@ -210,12 +161,7 @@ public class QuickSettingsTiles extends Fragment implements View.OnClickListener
         ArrayList<String> tiles = QuickSettingsUtil.getTileListFromString(
                 QuickSettingsUtil.getCurrentTiles(getActivity()));
         for (String tileindex : tiles) {
-            QuickSettingsUtil.TileInfo tile = null;
-            if (tileindex.contains(TILE_CUSTOM)) {
-                tile = QuickSettingsUtil.TILES.get(returnCustomTile(tileindex));
-            } else {
-                tile = QuickSettingsUtil.TILES.get(tileindex);
-            }
+            QuickSettingsUtil.TileInfo tile = QuickSettingsUtil.TILES.get(tileindex);
             if (tile != null) {
                 addTile(tile.getTitleResId(), tile.getIcon(), 0, false);
             }
@@ -281,8 +227,6 @@ public class QuickSettingsTiles extends Fragment implements View.OnClickListener
                         && DeviceUtils.deviceSupportsVibrator(getActivity())
                 || titleId == QuickSettingsUtil.TILES.get(
                             QSConstants.TILE_MUSIC).getTitleResId()
-                || titleId == QuickSettingsUtil.TILES.get(
-                            QSConstants.TILE_CUSTOM).getTitleResId()
                 || QuickSettingsUtil.isTileAvailable(QSConstants.TILE_NETWORKMODE)
                         && titleId == QuickSettingsUtil.TILES.get(
                             QSConstants.TILE_NETWORKMODE).getTitleResId()) {
@@ -315,10 +259,6 @@ public class QuickSettingsTiles extends Fragment implements View.OnClickListener
             public void onDelete(int index) {
                 ArrayList<String> tiles = QuickSettingsUtil.getTileListFromString(
                         QuickSettingsUtil.getCurrentTiles(getActivity()));
-                if (tiles.get(index).contains(TILE_CUSTOM)) {
-                    QuickSettingsUtil.deleteCustomTile(
-                            getActivity(), findCustomKey(tiles.get(index)));
-                }
                 tiles.remove(index);
                 QuickSettingsUtil.saveCurrentTiles(getActivity(),
                         mDragView.getChildCount() == 1 ?
@@ -349,10 +289,6 @@ public class QuickSettingsTiles extends Fragment implements View.OnClickListener
                     }
                     if (tiles.get(arg2).equals(QSConstants.TILE_MUSIC)) {
                         showDialogInner(DLG_MUSIC);
-                    }
-                    if (tiles.get(arg2).contains(TILE_CUSTOM)) {
-                        mCurrentCustomTile = findCustomKey(tiles.get(arg2));
-                        showDialogInner(DLG_CUSTOM_TILE);
                     }
                     return;
                 }
@@ -415,328 +351,6 @@ public class QuickSettingsTiles extends Fragment implements View.OnClickListener
             Resources.getSystem().getConfiguration().orientation
                     == Configuration.ORIENTATION_LANDSCAPE;
         return isLandscape;
-    }
-
-    private String returnCustomTile(String tile) {
-        String[] split = tile.split(TILE_CUSTOM_KEY);
-        return split[0];
-    }
-
-    private String findCustomKey(String tile) {
-        String[] split = tile.split(TILE_CUSTOM_KEY);
-        return split[1];
-    }
-
-    private View customTileDialogView() {
-        View view = View.inflate(getActivity(), R.layout.custom_tile_dialog, null);
-
-        mDialogIconOne = (ImageButton) view.findViewById(R.id.icon);
-        mDialogLabelOne = (Button) view.findViewById(R.id.action);
-        mDialogIconTwo = (ImageButton) view.findViewById(R.id.icon_two);
-        mDialogLabelTwo = (Button) view.findViewById(R.id.action_two);
-        mDialogIconThree = (ImageButton) view.findViewById(R.id.icon_three);
-        mDialogLabelThree = (Button) view.findViewById(R.id.action_three);
-        mDialogIconFour = (ImageButton) view.findViewById(R.id.icon_four);
-        mDialogLabelFour = (Button) view.findViewById(R.id.action_four);
-        mDialogIconFive = (ImageButton) view.findViewById(R.id.icon_five);
-        mDialogLabelFive = (Button) view.findViewById(R.id.action_five);
-
-        mDialogLabelOne.setText(returnFriendlyName(0));
-        mDialogIconOne.setImageDrawable(returnPackageDrawable(0));
-        mDialogLabelTwo.setText(returnFriendlyName(1));
-        mDialogIconTwo.setImageDrawable(returnPackageDrawable(1));
-        mDialogLabelThree.setText(returnFriendlyName(2));
-        mDialogIconThree.setImageDrawable(returnPackageDrawable(2));
-        mDialogLabelFour.setText(returnFriendlyName(3));
-        mDialogIconFour.setImageDrawable(returnPackageDrawable(3));
-        mDialogLabelFive.setText(returnFriendlyName(4));
-        mDialogIconFive.setImageDrawable(returnPackageDrawable(4));
-
-        mDialogIconOne.setOnClickListener(QuickSettingsTiles.this);
-        mDialogLabelOne.setOnClickListener(QuickSettingsTiles.this);
-        mDialogIconTwo.setOnClickListener(QuickSettingsTiles.this);
-        mDialogLabelTwo.setOnClickListener(QuickSettingsTiles.this);
-        mDialogIconThree.setOnClickListener(QuickSettingsTiles.this);
-        mDialogLabelThree.setOnClickListener(QuickSettingsTiles.this);
-        mDialogIconFour.setOnClickListener(QuickSettingsTiles.this);
-        mDialogLabelFour.setOnClickListener(QuickSettingsTiles.this);
-        mDialogIconFive.setOnClickListener(QuickSettingsTiles.this);
-        mDialogLabelFive.setOnClickListener(QuickSettingsTiles.this);
-
-        mDialogLabelOne.setOnLongClickListener(QuickSettingsTiles.this);
-        mDialogLabelTwo.setOnLongClickListener(QuickSettingsTiles.this);
-        mDialogLabelThree.setOnLongClickListener(QuickSettingsTiles.this);
-        mDialogLabelFour.setOnLongClickListener(QuickSettingsTiles.this);
-        mDialogLabelFive.setOnLongClickListener(QuickSettingsTiles.this);
-
-        return view;
-    }
-
-    private String returnFriendlyName(int index) {
-        String uri = QuickSettingsUtil.getActionAtIndex(getActivity(),
-                Settings.System.CUSTOM_TOGGLE_ACTIONS[index],
-                mCurrentCustomTile);
-        if (uri == null) {
-            return mEmptyLabel;
-        } else {
-            return AppHelper.getFriendlyNameForUri(
-                    getActivity(), getActivity().getPackageManager(), uri);
-        }
-    }
-
-    private Drawable returnPackageDrawable(int index) {
-        String uri = QuickSettingsUtil.getActionAtIndex(getActivity(),
-                Settings.System.CUSTOM_TOGGLE_ACTIONS[index],
-                mCurrentCustomTile);
-        Drawable icon = null;
-        if (uri != null) {
-            String iconUri = QuickSettingsUtil.getActionAtIndex(getActivity(),
-                    Settings.System.CUSTOM_TOGGLE_ICONS[index],
-                    mCurrentCustomTile);
-            if (iconUri != null && iconUri.length() > 0) {
-                File f = new File(Uri.parse(iconUri).getPath());
-                if (f.exists()) {
-                    icon = new BitmapDrawable(
-                            getResources(), f.getAbsolutePath());
-                }
-            } else {
-                try {
-                    Intent intent = Intent.parseUri(uri, 0);
-                    icon = LockscreenTargetUtils.getDrawableFromIntent(getActivity(), intent);
-                } catch (URISyntaxException e) {
-                    Log.wtf(TAG, "Invalid uri: " + uri);
-                }
-            }
-        }
-
-        if (icon == null) {
-            return mEmptyIcon;
-        } else {
-            return icon;
-        }
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == IconPicker.REQUEST_PICK_SYSTEM
-                || requestCode == IconPicker.REQUEST_PICK_GALLERY
-                || requestCode == IconPicker.REQUEST_PICK_ICON_PACK) {
-            mIconPicker.onActivityResult(requestCode, resultCode, data);
-        } else if (requestCode != Activity.RESULT_CANCELED
-                && resultCode != Activity.RESULT_CANCELED) {
-            mPicker.onActivityResult(requestCode, resultCode, data);
-        }
-    }
-
-    @Override
-    public void iconPicked(int requestCode, int resultCode, Intent intent) {
-        Drawable iconDrawable = null;
-        if (requestCode == IconPicker.REQUEST_PICK_GALLERY) {
-            if (resultCode == Activity.RESULT_OK) {
-                if (mTemporaryImage.length() == 0 || !mTemporaryImage.exists()) {
-                    Toast.makeText(getActivity(),
-                            getResources().getString(R.string.shortcut_image_not_valid),
-                            Toast.LENGTH_LONG).show();
-                    return;
-                }
-
-                File imageFile = new File(getActivity().getFilesDir(),
-                        "/custom_tile_" + System.currentTimeMillis() + ".png");
-                String path = imageFile.getAbsolutePath();
-                mTemporaryImage.renameTo(imageFile);
-                imageFile.setReadable(true, false);
-                iconDrawable = LockscreenTargetUtils.getDrawableFromFile(
-                        getActivity(), path);
-
-                deleteCustomIcon();  // Delete current icon if it exists before saving new.
-                QuickSettingsUtil.saveCustomActions(
-                        getActivity(), Settings.System.CUSTOM_TOGGLE_ICONS[mCurrentAction],
-                        path, mCurrentCustomTile);
-
-                switch (mCurrentAction) {
-                    case 0:
-                        mDialogIconOne.setImageDrawable(iconDrawable);
-                        break;
-                    case 1:
-                        mDialogIconTwo.setImageDrawable(iconDrawable);
-                        break;
-                    case 2:
-                        mDialogIconThree.setImageDrawable(iconDrawable);
-                        break;
-                    case 3:
-                        mDialogIconFour.setImageDrawable(iconDrawable);
-                        break;
-                    case 4:
-                        mDialogIconFive.setImageDrawable(iconDrawable);
-                        break;
-                }
-            } else {
-                if (mTemporaryImage.exists()) {
-                    mTemporaryImage.delete();
-                }
-            }
-        }
-    }
-
-    @Override
-    public void shortcutPicked(String uri, String friendlyName, boolean isApplication) {
-        if (uri == null) {
-            return;
-        }
-
-        Drawable icon = null;
-        try {
-            Intent intent = Intent.parseUri(uri, 0);
-            icon = LockscreenTargetUtils.getDrawableFromIntent(getActivity(), intent);
-        } catch (URISyntaxException e) {
-            Log.wtf(TAG, "Invalid uri: " + uri);
-        }
-
-        String setting = null;
-
-        if (mShortPress) {
-            setting =Settings.System.CUSTOM_TOGGLE_ACTIONS[mCurrentAction];
-            switch (mCurrentAction) {
-                case 0:
-                    mDialogLabelOne.setText(friendlyName);
-                    mDialogIconOne.setImageDrawable(icon);
-                    break;
-                case 1:
-                    mDialogLabelTwo.setText(friendlyName);
-                    mDialogIconTwo.setImageDrawable(icon);
-                    break;
-                case 2:
-                    mDialogLabelThree.setText(friendlyName);
-                    mDialogIconThree.setImageDrawable(icon);
-                    break;
-                case 3:
-                    mDialogLabelFour.setText(friendlyName);
-                    mDialogIconFour.setImageDrawable(icon);
-                    break;
-                case 4:
-                    mDialogLabelFive.setText(friendlyName);
-                    mDialogIconFive.setImageDrawable(icon);
-                    break;
-            }
-            deleteCustomIcon();
-        } else {
-            setting =Settings.System.CUSTOM_TOGGLE_LONG_ACTIONS[mCurrentAction];
-        }
-        QuickSettingsUtil.saveCustomActions(getActivity(),
-                setting, uri, mCurrentCustomTile);
-    }
-
-    private void deleteCustomIcon() {
-        String path = QuickSettingsUtil.getActionAtIndex(getActivity(),
-                Settings.System.CUSTOM_TOGGLE_ICONS[mCurrentAction],
-                mCurrentCustomTile);
-
-        if (path != null) {
-            File f = new File(path);
-            if (f != null && f.exists()) {
-                f.delete();
-            }
-        }
-        QuickSettingsUtil.deleteAction(getActivity(),
-                Settings.System.CUSTOM_TOGGLE_ICONS[mCurrentAction],
-                mCurrentCustomTile);
-    }
-
-    @Override
-    public void onClick(View v) {
-        switch(v.getId()) {
-            case R.id.icon:
-                prepareCustomIcon(0);
-                break;
-            case R.id.icon_two:
-                prepareCustomIcon(1);
-                break;
-            case R.id.icon_three:
-                prepareCustomIcon(2);
-                break;
-            case R.id.icon_four:
-                prepareCustomIcon(3);
-                break;
-            case R.id.icon_five:
-                prepareCustomIcon(4);
-                break;
-            case R.id.action:
-                prepareCustomAction(0);
-                break;
-            case R.id.action_two:
-                prepareCustomAction(1);
-                break;
-            case R.id.action_three:
-                prepareCustomAction(2);
-                break;
-            case R.id.action_four:
-                prepareCustomAction(3);
-                break;
-            case R.id.action_five:
-                prepareCustomAction(4);
-                break;
-        }
-    }
-
-    private void prepareCustomIcon(int action) {
-        mCurrentAction = action;
-        String uri = QuickSettingsUtil.getActionAtIndex(getActivity(),
-                Settings.System.CUSTOM_TOGGLE_ACTIONS[mCurrentAction],
-                mCurrentCustomTile);
-        if (uri != null) {
-            try {
-                mTemporaryImage.createNewFile();
-                mTemporaryImage.setWritable(true, false);
-                mIconPicker.pickGallery(getId(), mTemporaryImage);
-            } catch (IOException e) {
-                Log.d(TAG, "Could not create temporary icon", e);
-            }
-        } else {
-            Toast.makeText(getActivity(), R.string.custom_tile_null_warning,
-                    Toast.LENGTH_LONG).show();
-        }
-    }
-
-    private void prepareCustomAction(int action) {
-        mCurrentAction = action;
-        mShortPress = true;
-        mPicker.pickShortcut(getId());
-    }
-
-    @Override
-    public boolean onLongClick(View v) {
-        switch(v.getId()) {
-            case R.id.action:
-                prepareCustomLongAction(0);
-                break;
-            case R.id.action_two:
-                prepareCustomLongAction(1);
-                break;
-            case R.id.action_three:
-                prepareCustomLongAction(2);
-                break;
-            case R.id.action_four:
-                prepareCustomLongAction(3);
-                break;
-            case R.id.action_five:
-                prepareCustomLongAction(4);
-                break;
-        }
-        return true;
-    }
-
-    private void prepareCustomLongAction(int action) {
-        mCurrentAction = action;
-        mShortPress = false;
-        String uri = QuickSettingsUtil.getActionAtIndex(getActivity(),
-                Settings.System.CUSTOM_TOGGLE_ACTIONS[mCurrentAction],
-                mCurrentCustomTile);
-        if (uri == null) {
-            Toast.makeText(getActivity(), R.string.custom_tile_null_warning,
-                    Toast.LENGTH_LONG).show();
-        } else {
-            mPicker.pickShortcut(getId());
-        }
     }
 
     private void showDialogInner(int id) {
@@ -968,18 +582,13 @@ public class QuickSettingsTiles extends Fragment implements View.OnClickListener
                                     ArrayList<String> curr =
                                             QuickSettingsUtil.getTileListFromString(
                                                 QuickSettingsUtil.getCurrentTiles(getActivity()));
-                                    if (getOwner().mTileAdapter.getTileId(
-                                            position).contains(TILE_CUSTOM)) {
-                                        curr.add(getOwner().mTileAdapter.getTileId(position)
-                                                + TILE_CUSTOM_KEY + System.currentTimeMillis());
-                                    } else {
-                                        curr.add(getOwner().mTileAdapter.getTileId(position));
-                                    }
+                                    curr.add(getOwner().mTileAdapter.getTileId(position));
                                     QuickSettingsUtil.saveCurrentTiles(getActivity(),
                                             QuickSettingsUtil.getTileStringFromList(curr));
                                 }
                             }).start();
-                            TileInfo info = QuickSettingsUtil.TILES.get(
+                            TileInfo info =
+                                QuickSettingsUtil.TILES.get(
                                     getOwner().mTileAdapter.getTileId(position));
                             getOwner().addTile(info.getTitleResId(), info.getIcon(), 0, true);
                         }
@@ -1046,13 +655,6 @@ public class QuickSettingsTiles extends Fragment implements View.OnClickListener
                                 savedTiles);
                         }
                     })
-                    .create();
-                case DLG_CUSTOM_TILE:
-                    return new AlertDialog.Builder(getActivity())
-                    .setTitle(R.string.custom_tile_dialog_title)
-                    .setView(getOwner().customTileDialogView())
-                    .setCancelable(false)
-                    .setPositiveButton(R.string.dlg_ok, null)
                     .create();
             }
             throw new IllegalArgumentException("unknown id " + id);
@@ -1127,9 +729,6 @@ public class QuickSettingsTiles extends Fragment implements View.OnClickListener
         public boolean isEnabled(int position) {
             String usedTiles = QuickSettingsUtil.getCurrentTiles(
                     getContext());
-            if (TILE_CUSTOM.equals(mTiles[position].tile.getId())) {
-                return true;
-            }
             return !(usedTiles.contains(mTiles[position].tile.getId()));
         }
     }
